@@ -1,0 +1,26 @@
+{
+	"manifest_version": 3,
+	"name": "copy-figma-css",
+	"version": "1.0.5",
+	"action": {
+		"default_icon": "img/copy-figma-css-32.png",
+		"default_title": "copy-figma-css",
+		"default_popup": "index.html"
+	},
+	"description": "copy-figma-css",
+	"icons":
+	{
+		"16": "img/copy-figma-css-16.png",
+		"48": "img/copy-figma-css-48.png",
+		"128": "img/copy-figma-css-128.png"
+	},
+	"content_scripts": 
+	[
+		{
+			"matches": ["https://www.figma.com/file/*"],
+			"js": ["js/change-copy-css.js"],
+			"run_at": "document_start"
+		}
+	],
+	"permissions": ["storage", "activeTab", "clipboardWrite"]
+}

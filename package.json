@@ -1,0 +1,22 @@
+{
+  "name": "copy-figma-css",
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:watch": "vite build --watch",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "vue": "^3.2.16"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^1.9.3",
+    "ant-design-vue": "^3.0.0-alpha.4",
+    "less": "^4.1.2",
+    "less-loader": "^10.2.0",
+    "rollup-plugin-copy": "^3.4.0",
+    "vite": "^2.6.4",
+    "vite-plugin-style-import": "^1.3.0"
+  }
+}
