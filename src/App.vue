@@ -5,11 +5,22 @@
       <div class="control">
         <div
           class="switch"
-          :class="{ checked: refEnabled }"
-          @click="refEnabled = !refEnabled"
+          :class="{ checked: refCurrent.enabled }"
+          @click="refCurrent.enabled = !refCurrent.enabled"
         >
           <div class="switch-inner"></div>
         </div>
+      </div>
+    </div>
+    <div class="tabs">
+      <div
+        class="tab"
+        v-for="setting in refSettings"
+        :key="setting.name"
+        @click="refCurrent = setting"
+      >
+        <input v-model="setting.name" :disabled="!setting.editing" />
+        <Icon name="delete"></Icon>
       </div>
     </div>
     <div class="form-item form-item--block">
@@ -18,12 +29,12 @@
         <div class="attrs">
           <span
             class="attr"
-            :class="{ checked: attr.checked }"
-            @click="attr.checked = !attr.checked"
-            v-for="attr in refAttrs"
-            :key="attr.attr"
+            v-for="attr in allAttrs"
+            :key="attr"
+            :class="{ checked: refCurrent.attrs.indexOf(attr) > -1 }"
+            @click="onAttrClick(attr)"
           >
-            {{ attr.attr }}
+            {{ attr }}
           </span>
         </div>
       </div>
@@ -34,17 +45,17 @@
         <div class="attrs">
           <div
             class="attr"
-            :class="{ checked: scale === refScale }"
+            :class="{ checked: scale === refCurrent.scale }"
             v-for="scale in scales"
             :key="scale"
-            @click="refScale = scale"
+            @click="refCurrent.scale = scale"
           >
             {{ scale }}x
           </div>
           <Input
             class="attr attr-input-number"
             type="number"
-            v-model:value="refScale"
+            v-model:value="refCurrent.scale"
           />
         </div>
       </div>
@@ -55,10 +66,10 @@
         <div class="attrs">
           <div
             class="attr"
-            :class="{ checked: unit === refUnit }"
+            :class="{ checked: unit === refCurrent.unit }"
             v-for="unit in units"
             :key="unit"
-            @click="refUnit = unit"
+            @click="refCurrent.unit = unit"
           >
             {{ unit }}
           </div>
@@ -69,8 +80,8 @@
       <div class="label">转换 1px border</div>
       <div class="control">
         <Switch
-          :checked="refBorder1pxEnabled"
-          @change="refBorder1pxEnabled = !refBorder1pxEnabled"
+          :checked="refCurrent.border1pxEnabled"
+          @change="refCurrent.border1pxEnabled = !refCurrent.border1pxEnabled"
         />
       </div>
     </div>
@@ -78,8 +89,8 @@
       <div class="label">兼容 font-weight</div>
       <div class="control">
         <Switch
-          :checked="refFixFontWeight"
-          @change="refFixFontWeight = !refFixFontWeight"
+          :checked="refCurrent.fixFontWeight"
+          @change="refCurrent.fixFontWeight = !refCurrent.fixFontWeight"
         />
       </div>
     </div>
@@ -87,57 +98,23 @@
       <div class="label">变量</div>
       <div class="control">
         <Switch
-          :checked="refVarsEnabled"
-          @change="refVarsEnabled = !refVarsEnabled"
+          :checked="refCurrent.varEnabled"
+          @change="refCurrent.varEnabled = !refCurrent.varEnabled"
         />
       </div>
-      <div class="control control--block" v-if="refVarsEnabled">
-        <div class="attrs">
-          <div
-            class="attr"
-            :class="{ checked: item === refEditingVars }"
-            v-for="(item, index) in refVars"
-            :key="index"
-            @click="onVarsSelect(item)"
-          >
-            {{ item.name }}
-          </div>
-          <div class="attr" @click="onAddVars">+</div>
-        </div>
-        <div class="vars-edit" v-if="refEditingVars">
-          <div class="action">
-            <icon
-              class="clickable"
-              name="delete"
-              @click="onDeleteVars(refEditingVars)"
-            ></icon>
-          </div>
-          <div class="form-item form-item--block">
-            <div class="label">name</div>
-            <div class="controls">
-              <Input v-model:value="refEditingVars.name"></Input>
-            </div>
-          </div>
-          <div class="form-item form-item--block">
-            <div class="label">var</div>
-            <div class="controls">
-              <Textarea v-model:value="refEditingVars.str"></Textarea>
-            </div>
-          </div>
-        </div>
+      <div class="control control--block" v-if="refCurrent.varEnabled">
+        <Textarea v-model:value="refCurrent.varStr"></Textarea>
       </div>
     </div>
   </div>
 </template>
 <script>
-import { ref, watch, watchEffect } from "vue";
-import "./js/config.js";
+import { ref, reactive, watch, watchEffect, toRef } from "vue";
+import CONFIG from "./js/config.js";
 import Input from "./components/input.vue";
 import Textarea from "./components/textarea.vue";
 import Switch from "./components/switch.vue";
-import { getVarsFromStr } from "./utils/index";
-
-const CONFIG = window.COPY_FIGMA_CSS;
+import { getVarsFromStr, storageArrObjToArr } from "./utils/index";
 
 export default {
   components: {
@@ -148,21 +125,109 @@ export default {
   setup() {
     const returnValues = {};
 
-    const units = ["px", "rpx", "rem", "pt", "em"];
-    const scales = [1, 2, 0.5];
+    const { allAttrs, units, scales, settings } = CONFIG;
+    const refSettings = ref(settings);
+    let refCurrent = ref(refSettings.value[0]);
+    let inited = false;
+
+    Object.assign(returnValues, {
+      allAttrs,
+      units,
+      scales,
+      refSettings,
+      refCurrent,
+    });
+
+    function onAttrClick(attr) {
+      const attrs = refCurrent.value.attrs;
+      const index = attrs.indexOf(attr);
+      if (index > -1) {
+        attrs.splice(index, 1);
+      } else {
+        attrs.push(attr);
+      }
+    }
+    Object.assign(returnValues, { onAttrClick });
+
+    watch(
+      refCurrent,
+      (v) => {
+        const setting = v;
+        inited &&
+          chrome.storage &&
+          chrome.storage.sync.set({
+            setting,
+          });
+        console.log(setting, "current changed");
+      },
+      { deep: true }
+    );
+    watch(
+      refSettings,
+      (v) => {
+        const settings = v;
+        inited &&
+          chrome.storage &&
+          chrome.storage.sync.set({
+            settings,
+          });
+        console.log("settings changed");
+      },
+      { deep: true }
+    );
+    chrome.storage &&
+      chrome.storage.sync.get(["settings", "setting"], (stores) => {
+        const { settings, setting } = stores;
+        if (settings && setting) {
+          refSettings.value = stores.settings;
+          refCurrent.value =
+            settings.find((item) => item.name === setting.name) || settings[0];
+        }
+        inited = true;
+      });
+
+    chrome.chrome.storage &&
+      chrome.storage.sync.get(["settingIds", "currentId"], (stores) => {
+        let { settingIds, currentId } = stores;
+        if (!settingIds) {
+          // 首次存储配置
+          chrome.storage.sync.set({
+            settingIds: CONFIG.settings.map((item) => item.id),
+            currentId: settingIds[0],
+          });
+          settings.forEach((item) => {
+            chrome.storage.sync.set({
+              [`setting_${item.id}`]: item,
+            });
+          });
+        } else {
+          const sIds = settingIds.map((id) => `setting_${id}`);
+          const settings = [];
+          chrome.storage.sync.get(sIds, (stores) => {
+            for (let id in stores) {
+              settings.push(stores[id]);
+            }
+            refSettings.value = settings;
+            refCurrent.value = settings.find((item) => item.id === currentId);
+          });
+        }
+      });
+
+    return returnValues;
+
     const refAttrs = ref(
-      CONFIG.allAttr.map((item) => {
+      CONFIG.allAttrs.map((item) => {
         return {
           attr: item,
-          checked: CONFIG.settings.attrs.indexOf(item) > -1,
+          checked: CONFIG.settings[0].attrs.indexOf(item) > -1,
         };
       })
     );
-    const refEnabled = ref(CONFIG.settings.enabled);
-    const refUnit = ref(CONFIG.settings.unit);
-    const refScale = ref(CONFIG.settings.scale);
-    const refBorder1pxEnabled = ref(CONFIG.settings.border1pxEnabled);
-    const refFixFontWeight = ref(CONFIG.settings.fixFontWeight);
+    const refEnabled = ref(CONFIG.settings[0].enabled);
+    const refUnit = ref(CONFIG.settings[0].unit);
+    const refScale = ref(CONFIG.settings[0].scale);
+    const refBorder1pxEnabled = ref(CONFIG.settings[0].border1pxEnabled);
+    const refFixFontWeight = ref(CONFIG.settings[0].fixFontWeight);
     Object.assign(returnValues, {
       units,
       scales,
@@ -174,8 +239,8 @@ export default {
       refFixFontWeight,
     });
 
-    const refVarsEnabled = ref(CONFIG.settings.varsEnabled);
-    const refVars = ref(CONFIG.settings.vars);
+    const refVarsEnabled = ref(CONFIG.settings[0].varsEnabled);
+    const refVars = ref(CONFIG.settings[0].vars);
     const refEditingVars = ref(refVars.value[0]);
     const onVarsSelect = (vars) => {
       refVars.value.forEach((item) => (item.enabled = false));
@@ -296,7 +361,14 @@ export default {
       const fixFontWeight = refFixFontWeight.value;
 
       if (chrome.storage /*  && chrome.tabs */) {
-        chrome.storage.sync.set({ enabled, attrs, unit, scale, border1pxEnabled, fixFontWeight });
+        chrome.storage.sync.set({
+          enabled,
+          attrs,
+          unit,
+          scale,
+          border1pxEnabled,
+          fixFontWeight,
+        });
       }
     });
     return returnValues;

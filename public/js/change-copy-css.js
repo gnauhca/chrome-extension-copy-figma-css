@@ -1,5 +1,5 @@
 const isBrowser = typeof window !== 'undefined';
-const settings = {
+const setting = {
   enabled: true,
   attrs: [
     'width',
@@ -19,41 +19,61 @@ const settings = {
   scale: 1,
   border1pxEnabled: true,
   fixFontWeight: true,
-  varsEnabled: false,
+  varEnabled: false,
   varData: null,
+  varStr: '',
 };
 if (isBrowser) {
   chrome.storage.sync.get(
-    ['enabled', 'attrs', 'unit', 'scale', 'border1pxEnabled', 'varsEnabled', 'varData'],
+    ['setting'],
     (stores) => {
-      changeSettings(stores);
+      changeSettings(stores.setting);
     },
   );
   chrome.storage.onChanged.addListener(function (changes, namespace) {
-    const newSettings = {};
-    for (let [key, { oldValue, newValue }] of Object.entries(changes)) {
-      if (!(key in settings)) {
-        continue;
-      }
-      console.log(
-        `Storage key "${key}" in namespace "${namespace}" changed.`,
-        `Old value was "${oldValue}", new value is "${newValue}".`,
-      );
-      newSettings[key] = newValue;
+    if (changes.setting) {
+      changeSettings(changes.setting.newValue);
     }
-    changeSettings(newSettings);
   });
 }
 
+function getVarsFromStr(str = '') {
+  const vars = [];
+  const regx = /([\w\-\@\$]+):([\s\S]+?);/gm;
+
+  str.replace(regx, (s, key, value) => {
+    let fixValue = value.replace(/!important/g, '');
+    fixValue = fixValue.trim();
+    vars.push([key, fixValue]);
+  });
+  return vars;
+}
+
+// storage array transform
+function storageArrObjToArr(storageArrayObj) {
+  const arr = [];
+  for(let key in storageArrayObj) {
+    arr[Number(key)] = storageArrayObj[key];
+  }
+  return arr;
+}
+
 function changeSettings(newSettings) {
-  Object.assign(settings, newSettings);
+  if (!newSettings) {
+    return;
+  }
+  Object.assign(setting, newSettings);
+  setting.varData = getVarsFromStr(setting.varStr);
   tryBindCodeWrapperElemEvent();
-  console.log('settings', settings);
+  if (!Array.isArray(setting.attrs)) {
+    setting.attrs = storageArrObjToArr(setting.attrs);
+  }
+  console.log('setting', setting);
 }
 
 function transformUnit(rawStr) {
   let result = rawStr.replace(/([\d\.]+)px/g, (pxStr, number) => {
-    return Number((number * settings.scale).toFixed(6)) + settings.unit;
+    return Number((number * setting.scale).toFixed(6)) + setting.unit;
   });
   return result;
 }
@@ -62,14 +82,18 @@ function getMiniCss(rawStr) {
   let str = ``;
   const rowRegx = /s*[a-z-]+:s*(.+);/gim;
   const rows = rawStr.match(rowRegx);
+  const isFont = Boolean(rawStr.match(/font-size/));
   if (rows) {
     rows.forEach((row) => {
       let [key, value] = row.split(':').map((item) => item.trim());
       value = value.replace(/;$/, '');
-      if (settings.attrs.indexOf(key) === -1) {
+      if (setting.attrs.indexOf(key) === -1) {
         return;
       }
-      if (key === 'font-weight' && settings.fixFontWeight) {
+      if (isFont && (key === 'width' || key === 'height')) {
+        return;
+      }
+      if (key === 'font-weight' && setting.fixFontWeight) {
         let fontWeightValue = Number(value);
         if (!isNaN(fontWeightValue)) {
           if (fontWeightValue < 400) {
@@ -81,18 +105,18 @@ function getMiniCss(rawStr) {
           fontWeightValue = value;
         }
         value = fontWeightValue + '';
-      } else if (key === 'border' && value.indexOf('1px') > -1 && !settings.border1pxEnabled) {
+      } else if (key === 'border' && value.indexOf('1px') > -1 && !setting.border1pxEnabled) {
         // 不处理
       } else {
         value = transformUnit(value);
       }
 
       // 变量替换
-      if (settings.varsEnabled && settings.varData) {
+      if (setting.varEnabled && setting.varData) {
         value = value.replace(/\s*,\s*/g, ',');
         value = value.trim();
         value = value.toLowerCase();
-        for (let [varkey, varValue] of settings.varData) {
+        for (let [varkey, varValue] of setting.varData) {
           varValue = varValue.trim();
           varValue = varValue.toLowerCase();
           varValue = varValue.replace(/\s*,\s*/g, ',');
@@ -127,7 +151,7 @@ background: #FF8000;
 }
 
 function setClipboardText(event) {
-  if (!settings.enabled) {
+  if (!setting.enabled) {
     return;
   }
   var result = window.getSelection(0).toString();
@@ -178,7 +202,7 @@ function tryBindCodeWrapperElemEvent() {
       if (!hasActiveTabTip) {
         hasActiveTabTip = true;
         hasSuccessTip = false;
-        toast('请激活 inspect(检查) Tab 以启用自动复制 CSS 的功能');
+        toast('请点击 inspect(检查) Tab 以启用自动复制 CSS 的功能');
       }
       return;
     }
@@ -193,7 +217,7 @@ function tryBindCodeWrapperElemEvent() {
 }
 
 function copyElemText(elem) {
-  if (!settings.enabled) {
+  if (!setting.enabled) {
     return;
   }
   var r = document.createRange();
@@ -223,7 +247,7 @@ window.addEventListener('load', () => {
 });
 
 function toast(message, dur = 3000) {
-  if (!settings.enabled) {
+  if (!setting.enabled) {
     return;
   }
   messageElem.innerHTML = message;

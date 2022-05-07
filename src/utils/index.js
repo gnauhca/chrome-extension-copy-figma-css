@@ -9,3 +9,10 @@ export function getVarsFromStr(str = '') {
   });
   return vars;
 }
+export function storageArrObjToArr(storageArrayObj) {
+  const arr = [];
+  for(let key in storageArrayObj) {
+    arr[Number(key)] = storageArrayObj[key];
+  }
+  return arr;
+}

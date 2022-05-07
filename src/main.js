@@ -3,5 +3,5 @@ import App from './App.vue';
 import Icon from './components/icon/index.vue';
 
 const app = createApp(App);
-app.component('icon', Icon);
+app.component('Icon', Icon);
 app.mount('#app');
