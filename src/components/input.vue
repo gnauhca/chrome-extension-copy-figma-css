@@ -27,8 +27,9 @@ export default {
 </script>
 <style lang="less">
 input {
-  padding: 5px 10px;
-  height: 32px;
+  padding: 4px 8px;
+  font-size: 12px;
+  line-height: 16px;
   background: #fff;
   border: 1px solid #dbdbdb;
   border-radius: 4px;

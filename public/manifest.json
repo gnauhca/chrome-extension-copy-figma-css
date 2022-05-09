@@ -1,7 +1,7 @@
 {
 	"manifest_version": 3,
 	"name": "copy-figma-css",
-	"version": "1.0.5",
+	"version": "1.0.6",
 	"action": {
 		"default_icon": "img/copy-figma-css-32.png",
 		"default_title": "copy-figma-css",

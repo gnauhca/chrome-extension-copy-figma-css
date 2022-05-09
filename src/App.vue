@@ -1,5 +1,34 @@
 <template>
   <div class="panel">
+    <div class="help" @click="refHelpDialogVisible = true">?</div>
+    <div class="tabs">
+      <div class="tab-nav-wrapper" ref="refTabWrapper">
+        <div class="tab-nav-inner">
+          <div
+            class="tab-nav"
+            :class="{ current: setting === refCurrent }"
+            v-for="setting in refSettings"
+            :key="setting.name"
+            @click="refCurrent = setting"
+          >
+            <span
+              :contenteditable="setting === refCurrent"
+              @blur="onTabBlur($event, setting)"
+            >
+              {{ setting.name }}
+            </span>
+            <span
+              class="delete"
+              @click="onSettingDelete(setting)"
+              v-if="refSettings.length > 1"
+            >
+              +
+            </span>
+          </div>
+        </div>
+      </div>
+      <div class="add" @click="onSettingAdd">+</div>
+    </div>
     <div class="form-item">
       <div class="label">启用</div>
       <div class="control">
@@ -12,130 +41,149 @@
         </div>
       </div>
     </div>
-    <div class="tabs">
-      <div
-        class="tab"
-        v-for="setting in refSettings"
-        :key="setting.name"
-        @click="refCurrent = setting"
-      >
-        <input v-model="setting.name" :disabled="!setting.editing" />
-        <Icon name="delete"></Icon>
-      </div>
-    </div>
-    <div class="form-item form-item--block">
-      <div class="label">属性</div>
-      <div class="control">
-        <div class="attrs">
-          <span
-            class="attr"
-            v-for="attr in allAttrs"
-            :key="attr"
-            :class="{ checked: refCurrent.attrs.indexOf(attr) > -1 }"
-            @click="onAttrClick(attr)"
-          >
-            {{ attr }}
-          </span>
+    <div class="setting-wrapper" v-if="refCurrent.enabled">
+      <div class="form-item form-item--block">
+        <div class="label">属性</div>
+        <div class="control">
+          <div class="attrs">
+            <span
+              class="attr"
+              v-for="attr in allAttrs"
+              :key="attr"
+              :class="{ checked: refCurrent.attrs.indexOf(attr) > -1 }"
+              @click="onAttrClick(attr)"
+            >
+              {{ attr }}
+            </span>
+          </div>
         </div>
       </div>
-    </div>
-    <div class="form-item">
-      <div class="label">缩放</div>
-      <div class="control">
-        <div class="attrs">
-          <div
-            class="attr"
-            :class="{ checked: scale === refCurrent.scale }"
-            v-for="scale in scales"
-            :key="scale"
-            @click="refCurrent.scale = scale"
-          >
-            {{ scale }}x
+      <div class="form-item">
+        <div class="label">缩放</div>
+        <div class="control">
+          <div class="attrs">
+            <div
+              class="attr"
+              :class="{ checked: scale === refCurrent.scale }"
+              v-for="scale in scales"
+              :key="scale"
+              @click="refCurrent.scale = scale"
+            >
+              {{ scale }}x
+            </div>
+            <Input
+              class="attr attr-input-number"
+              type="number"
+              v-model:value="refCurrent.scale"
+            />
           </div>
-          <Input
-            class="attr attr-input-number"
-            type="number"
-            v-model:value="refCurrent.scale"
+        </div>
+      </div>
+      <div class="form-item">
+        <div class="label">单位</div>
+        <div class="control">
+          <div class="attrs">
+            <div
+              class="attr"
+              :class="{ checked: unit === refCurrent.unit }"
+              v-for="unit in units"
+              :key="unit"
+              @click="refCurrent.unit = unit"
+            >
+              {{ unit }}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="form-item">
+        <div class="label">转换 1px border</div>
+        <div class="control">
+          <Switch
+            :checked="refCurrent.border1pxEnabled"
+            @change="refCurrent.border1pxEnabled = !refCurrent.border1pxEnabled"
           />
         </div>
       </div>
-    </div>
-    <div class="form-item">
-      <div class="label">单位</div>
-      <div class="control">
-        <div class="attrs">
-          <div
-            class="attr"
-            :class="{ checked: unit === refCurrent.unit }"
-            v-for="unit in units"
-            :key="unit"
-            @click="refCurrent.unit = unit"
-          >
-            {{ unit }}
+      <div class="form-item">
+        <div class="label">兼容 font-weight</div>
+        <div class="control">
+          <Switch
+            :checked="refCurrent.fixFontWeight"
+            @change="refCurrent.fixFontWeight = !refCurrent.fixFontWeight"
+          />
+        </div>
+      </div>
+      <div class="form-item">
+        <div class="label">变量</div>
+        <div class="control">
+          <Switch
+            :checked="refCurrent.varEnabled"
+            @change="refCurrent.varEnabled = !refCurrent.varEnabled"
+          />
+        </div>
+        <div class="control control--block" v-if="refCurrent.varEnabled">
+          <div class="vars-edit">
+            <Textarea
+              placeholder="支持 sass less cssvar 例：@primary-color: #abc;"
+              v-model:value="refCurrent.varStr"
+            ></Textarea>
           </div>
         </div>
       </div>
     </div>
-    <div class="form-item">
-      <div class="label">转换 1px border</div>
-      <div class="control">
-        <Switch
-          :checked="refCurrent.border1pxEnabled"
-          @change="refCurrent.border1pxEnabled = !refCurrent.border1pxEnabled"
-        />
+    <Modal :visible="refHelpDialogVisible" title="使用说明" :footer="null" @cancel="refHelpDialogVisible = false">
+      <div class="help-content">
+        <p>1 打开 figma 设计稿，<span class="warning">打开新设计稿需刷新页面</span></p>
+        <p class="warning">2 激活 “检查(inspect)” tab</p>
+        <p>3 选中元素，样式即自动复制到剪贴板</p>
       </div>
-    </div>
-    <div class="form-item">
-      <div class="label">兼容 font-weight</div>
-      <div class="control">
-        <Switch
-          :checked="refCurrent.fixFontWeight"
-          @change="refCurrent.fixFontWeight = !refCurrent.fixFontWeight"
-        />
-      </div>
-    </div>
-    <div class="form-item">
-      <div class="label">变量</div>
-      <div class="control">
-        <Switch
-          :checked="refCurrent.varEnabled"
-          @change="refCurrent.varEnabled = !refCurrent.varEnabled"
-        />
-      </div>
-      <div class="control control--block" v-if="refCurrent.varEnabled">
-        <Textarea v-model:value="refCurrent.varStr"></Textarea>
-      </div>
-    </div>
+    </Modal>
   </div>
 </template>
 <script>
-import { ref, reactive, watch, watchEffect, toRef } from "vue";
+import { ref, watch } from "vue";
+import cloneDeep from "lodash/cloneDeep";
 import CONFIG from "./js/config.js";
 import Input from "./components/input.vue";
 import Textarea from "./components/textarea.vue";
 import Switch from "./components/switch.vue";
-import { getVarsFromStr, storageArrObjToArr } from "./utils/index";
+import { Modal } from "ant-design-vue";
+
+window.getAll = function () {
+  chrome.storage &&
+    chrome.storage.sync.get(null, (stores) => {
+      console.log(stores);
+    });
+};
+window.clearAll = function () {
+  chrome.storage && chrome.storage.sync.clear();
+};
 
 export default {
   components: {
     Input,
     Textarea,
     Switch,
+    Modal,
   },
   setup() {
     const returnValues = {};
+    const refTabWrapper = ref(null);
 
     const { allAttrs, units, scales, settings } = CONFIG;
     const refSettings = ref(settings);
-    let refCurrent = ref(refSettings.value[0]);
-    let inited = false;
+    const refCurrent = ref(refSettings.value[0]);
+    const refHelpDialogVisible = ref(false);
 
     Object.assign(returnValues, {
+      refTabWrapper,
+
       allAttrs,
       units,
       scales,
       refSettings,
       refCurrent,
+      refHelpDialogVisible,
     });
 
     function onAttrClick(attr) {
@@ -149,228 +197,112 @@ export default {
     }
     Object.assign(returnValues, { onAttrClick });
 
+    function onSettingAdd() {
+      const newSetting = cloneDeep(CONFIG.settings[0]);
+      if (!chrome.storage) {
+        refSettings.value.push(newSetting);
+        refCurrent.value = newSetting;
+      } else {
+        chrome.storage.sync.get(["settingIds"], (stores) => {
+          const { settingIds } = stores;
+          const newId = Math.max.apply(null, settingIds) + 1;
+          newSetting.id = newId;
+          newSetting.name = `config ${newId}`;
+          settingIds.push(newId);
+          chrome.storage &&
+            chrome.storage.sync.set({
+              [`setting_${newId}`]: newSetting,
+              settingIds,
+              currentId: newId,
+            });
+          refSettings.value.push(newSetting);
+          refCurrent.value = newSetting;
+        });
+      }
+      scrollToCurrent();
+    }
+    function onSettingDelete(setting) {
+      Modal.confirm({
+        title: `确认删除 ${setting.name} 配置吗?`,
+        cancelText: "取消",
+        okText: "确认",
+        onOk() {
+          const index = refSettings.value.indexOf(setting);
+          const removeId = refSettings.value[index].id;
+          refSettings.value.splice(index, 1);
+          refCurrent.value =
+            refSettings.value[Math.max(0, refSettings.value.length - 1)];
+
+          chrome.storage && chrome.storage.sync.remove(`setting_${removeId}`);
+        },
+      });
+    }
+    function onTabBlur(e, setting) {
+      setting.name = e.target.innerText;
+    }
+    Object.assign(returnValues, { onSettingAdd, onSettingDelete, onTabBlur });
+
+    function scrollToCurrent() {
+      const currentElem = refTabWrapper.value.querySelector(".current");
+      console.log(currentElem.innerText);
+      setTimeout(() => {
+        refTabWrapper.value.scrollTo({
+          left: currentElem.offsetLeft,
+          behavior: "smooth",
+        });
+        console.log(refTabWrapper.value);
+      }, 50);
+    }
+
+    setTimeout(scrollToCurrent, 500);
+
     watch(
       refCurrent,
       (v) => {
-        const setting = v;
-        inited &&
-          chrome.storage &&
+        const setting = cloneDeep(v);
+        chrome.storage &&
           chrome.storage.sync.set({
-            setting,
+            [`setting_${setting.id}`]: setting,
+            settingIds: refSettings.value.map((item) => item.id),
+            currentId: setting.id,
           });
-        console.log(setting, "current changed");
+        console.log("current changed", setting);
       },
       { deep: true }
     );
-    watch(
-      refSettings,
-      (v) => {
-        const settings = v;
-        inited &&
-          chrome.storage &&
-          chrome.storage.sync.set({
-            settings,
-          });
-        console.log("settings changed");
-      },
-      { deep: true }
-    );
-    chrome.storage &&
-      chrome.storage.sync.get(["settings", "setting"], (stores) => {
-        const { settings, setting } = stores;
-        if (settings && setting) {
-          refSettings.value = stores.settings;
-          refCurrent.value =
-            settings.find((item) => item.name === setting.name) || settings[0];
-        }
-        inited = true;
-      });
-
-    chrome.chrome.storage &&
-      chrome.storage.sync.get(["settingIds", "currentId"], (stores) => {
-        let { settingIds, currentId } = stores;
-        if (!settingIds) {
-          // 首次存储配置
-          chrome.storage.sync.set({
-            settingIds: CONFIG.settings.map((item) => item.id),
-            currentId: settingIds[0],
-          });
-          settings.forEach((item) => {
-            chrome.storage.sync.set({
-              [`setting_${item.id}`]: item,
-            });
-          });
-        } else {
-          const sIds = settingIds.map((id) => `setting_${id}`);
-          const settings = [];
-          chrome.storage.sync.get(sIds, (stores) => {
-            for (let id in stores) {
-              settings.push(stores[id]);
-            }
-            refSettings.value = settings;
-            refCurrent.value = settings.find((item) => item.id === currentId);
-          });
-        }
-      });
-
-    return returnValues;
-
-    const refAttrs = ref(
-      CONFIG.allAttrs.map((item) => {
-        return {
-          attr: item,
-          checked: CONFIG.settings[0].attrs.indexOf(item) > -1,
-        };
-      })
-    );
-    const refEnabled = ref(CONFIG.settings[0].enabled);
-    const refUnit = ref(CONFIG.settings[0].unit);
-    const refScale = ref(CONFIG.settings[0].scale);
-    const refBorder1pxEnabled = ref(CONFIG.settings[0].border1pxEnabled);
-    const refFixFontWeight = ref(CONFIG.settings[0].fixFontWeight);
-    Object.assign(returnValues, {
-      units,
-      scales,
-      refAttrs,
-      refUnit,
-      refScale,
-      refEnabled,
-      refBorder1pxEnabled,
-      refFixFontWeight,
-    });
-
-    const refVarsEnabled = ref(CONFIG.settings[0].varsEnabled);
-    const refVars = ref(CONFIG.settings[0].vars);
-    const refEditingVars = ref(refVars.value[0]);
-    const onVarsSelect = (vars) => {
-      refVars.value.forEach((item) => (item.enabled = false));
-      vars.enabled = true;
-      refEditingVars.value = vars;
-    };
-    const onAddVars = () => {
-      const newVars = {
-        name: "new vars",
-        str: "",
-      };
-      refVars.value.push(newVars);
-      refEditingVars.value = newVars;
-    };
-
-    const onDeleteVars = () => {
-      refVars.value = refVars.value.filter(
-        (item) => item !== refEditingVars.value
-      );
-      refEditingVars.value = null;
-    };
-    const varObj = getVarsFromStr(refVars.value[0].str);
-    console.log(varObj);
-
-    Object.assign(returnValues, {
-      refVarsEnabled,
-      refVars,
-      onVarsSelect,
-      refEditingVars,
-      onAddVars,
-      onDeleteVars,
-    });
 
     chrome.storage &&
       chrome.storage.sync.get(
-        [
-          "enabled",
-          "attrs",
-          "unit",
-          "scale",
-          "border1pxEnabled",
-          "fixFontWeight",
-          "varsEnabled",
-          "vars",
-          "editingVarsIndex",
-        ],
+        ["settingIds", "currentId", "version"],
         (stores) => {
-          if (typeof stores.enabled !== "undefined") {
-            refEnabled.value = stores.enabled;
-          }
-          if (typeof stores.unit !== "undefined") {
-            refUnit.value = stores.unit;
-          }
-          if (typeof stores.scale !== "undefined") {
-            refScale.value = stores.scale;
-          }
-          if (typeof stores.border1pxEnabled !== "undefined") {
-            refBorder1pxEnabled.value = stores.border1pxEnabled;
-          }
-          if (typeof stores.fixFontWeight !== "undefined") {
-            refFixFontWeight.value = stores.fixFontWeight;
-          }
-          if (typeof stores.attrs !== "undefined") {
-            refAttrs.value.forEach((item) => {
-              if (stores.attrs.indexOf(item.attr) > -1) {
-                item.checked = true;
-              } else {
-                item.checked = false;
-              }
+          let { settingIds, currentId } = stores;
+          if (!settingIds) {
+            // 首次存储配置
+            const ids = CONFIG.settings.map((item) => item.id);
+            const cId = ids[0];
+            chrome.storage.sync.set({
+              settingIds: ids,
+              currentId: cId,
             });
-          }
-          if (typeof stores.varsEnabled !== "undefined") {
-            refVarsEnabled.value = stores.varsEnabled;
-          }
-          if (typeof stores.vars !== "undefined") {
-            refVars.value = [];
-            for (let key in stores.vars) {
-              refVars.value.push(stores.vars[key]);
-            }
-          }
-          if (stores.editingVarsIndex >= 0) {
-            refEditingVars.value =
-              refVars.value[stores.editingVarsIndex] || null;
+            const settingStores = {};
+            settings.forEach((item) => {
+              settingStores[`setting_${item.id}`] = item;
+              chrome.storage.sync.set(settingStores);
+            });
+          } else {
+            const sIds = settingIds.map((id) => `setting_${id}`);
+            const settings = [];
+            chrome.storage.sync.get(sIds, (stores) => {
+              for (let id in stores) {
+                settings.push(stores[id]);
+              }
+              refSettings.value = settings;
+              refCurrent.value = settings.find((item) => item.id === currentId);
+            });
           }
         }
       );
 
-    watch(refScale, () => {
-      if (refScale.value < 0) {
-        refScale.value = 0;
-      }
-    });
-
-    watchEffect(() => {
-      let varData = null;
-      let index = -1;
-      if (refVarsEnabled.value && refEditingVars.value) {
-        varData = getVarsFromStr(refEditingVars.value.str);
-        index = refVars.value.indexOf(refEditingVars.value);
-      }
-      chrome.storage &&
-        chrome.storage.sync.set({
-          varsEnabled: refVarsEnabled.value,
-          vars: refVars.value,
-          varData,
-          editingVarsIndex: index,
-        });
-    });
-
-    watchEffect(() => {
-      const enabled = refEnabled.value;
-      const attrs = refAttrs.value
-        .filter((item) => item.checked)
-        .map((item) => item.attr);
-      const unit = refUnit.value || "px";
-      const scale = refScale.value || 1;
-      const border1pxEnabled = refBorder1pxEnabled.value;
-      const fixFontWeight = refFixFontWeight.value;
-
-      if (chrome.storage /*  && chrome.tabs */) {
-        chrome.storage.sync.set({
-          enabled,
-          attrs,
-          unit,
-          scale,
-          border1pxEnabled,
-          fixFontWeight,
-        });
-      }
-    });
     return returnValues;
   },
 };
@@ -382,24 +314,131 @@ export default {
   margin: 0;
   box-sizing: border-box;
 }
+body {
+  overscroll-behavior: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
 .panel {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  position: relative;
   color: #2c3e50;
-  width: 400px;
-  padding: 10px 20px;
+  width: 350px;
+  padding-bottom: 15px;
+}
+.help {
+  position: absolute;
+  top: 50px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 100%;
+  color: #fff;
+  background: #1f8fff;
+  cursor: pointer;
+}
+.help-content {
+  font-size: 13px;
+  p {
+    margin-bottom: 5px;
+  }
+  .warning {
+    color: red;
+  }
+}
+.tabs {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  background: #f5f5f5;
+  .add {
+    flex: none;
+    margin-right: 10px;
+    width: 34px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    border-radius: 100%;
+    cursor: pointer;
+    user-select: none;
+  }
+  .tab-nav-wrapper {
+    overflow-x: scroll;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+    .tab-nav-inner {
+      display: flex;
+      align-items: center;
+      flex-wrap: nowrap;
+    }
+    .tab-nav {
+      display: flex;
+      align-items: center;
+      flex: none;
+      position: relative;
+      user-select: none;
+      padding: 6px 12px;
+      font-size: 12px;
+      margin-left: -1px;
+      &.current {
+        position: relative;
+        z-index: 1;
+        background: #fff;
+      }
+      &[contenteditable="true"] {
+        user-select: unset;
+        outline: none;
+      }
+      &:first-child {
+        padding-left: 20px;
+      }
+      .delete {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        line-height: 10px;
+        margin-left: 5px;
+        transform: rotate(45deg);
+        font-size: 16px;
+        text-align: center;
+        cursor: pointer;
+      }
+      &:not(.current)::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        right: 0;
+        height: 60%;
+        border-right: 1px solid #ddd;
+        transform: translateY(-50%);
+      }
+    }
+  }
 }
 .form-item {
   display: block;
+  padding: 0 20px;
   & + .form-item {
-    margin-top: 20px;
+    margin-top: 12px;
   }
   .label {
     margin-right: 20px;
     flex: none;
     font-size: 12px;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
   }
   .control {
     &--block {
@@ -410,6 +449,10 @@ export default {
   }
 }
 
+.setting-wrapper {
+  margin-top: 12px;
+}
+
 .attrs {
   display: flex;
   flex-wrap: wrap;
@@ -418,12 +461,13 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 5px 10px;
+  padding: 4px 8px;
   white-space: nowrap;
   cursor: pointer;
   border-radius: 4px;
   margin: 2px;
   font-size: 12px;
+  line-height: 16px;
   background: #f5f5f5;
   transition: background 0.3s, color 0.3s;
   user-select: none;
@@ -433,37 +477,19 @@ export default {
   }
 }
 .attr-input-number {
-  padding: 5px 10px;
+  padding: 4px 8px;
+  font-size: 12px;
+  line-height: 16px;
   width: 70px;
-  height: 32px;
   background: #fff;
   border: 1px solid #dbdbdb;
 }
 .vars-edit {
   position: relative;
   margin-top: 10px;
-  padding: 20px 10px;
-  border: 1px solid #dbdbdb;
-  border-radius: 4px;
-  input,
   textarea {
     width: 100%;
-  }
-  .form-item {
-    .label {
-      font-size: 12px;
-      margin-bottom: 5px;
-    }
-  }
-  .action {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    font-size: 16px;
-    .icon {
-      cursor: pointer;
-      color: #999;
-    }
+    font-size: 12px;
   }
 }
 </style>
