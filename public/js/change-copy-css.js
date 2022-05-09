@@ -24,16 +24,9 @@ const setting = {
   varStr: '',
 };
 if (isBrowser) {
-  chrome.storage.sync.get(
-    ['setting'],
-    (stores) => {
-      changeSettings(stores.setting);
-    },
-  );
-  chrome.storage.onChanged.addListener(function (changes, namespace) {
-    if (changes.setting) {
-      changeSettings(changes.setting.newValue);
-    }
+  updateSetting();
+  chrome.storage.onChanged.addListener(function () {
+    updateSetting();
   });
 }
 
@@ -49,26 +42,19 @@ function getVarsFromStr(str = '') {
   return vars;
 }
 
-// storage array transform
-function storageArrObjToArr(storageArrayObj) {
-  const arr = [];
-  for(let key in storageArrayObj) {
-    arr[Number(key)] = storageArrayObj[key];
-  }
-  return arr;
-}
-
-function changeSettings(newSettings) {
-  if (!newSettings) {
-    return;
-  }
-  Object.assign(setting, newSettings);
-  setting.varData = getVarsFromStr(setting.varStr);
-  tryBindCodeWrapperElemEvent();
-  if (!Array.isArray(setting.attrs)) {
-    setting.attrs = storageArrObjToArr(setting.attrs);
-  }
-  console.log('setting', setting);
+function updateSetting() {
+  chrome.storage &&
+    chrome.storage.sync.get(['settingIds', 'currentId'], (stores) => {
+      const { settingIds, currentId } = stores;
+      if (settingIds && settingIds.indexOf(currentId) > -1) {
+        chrome.storage.sync.get([`setting_${currentId}`], (stores) => {
+          Object.assign(setting, stores[`setting_${currentId}`]);
+          setting.varData = getVarsFromStr(setting.varStr);
+          tryBindCodeWrapperElemEvent();
+          log('setting', setting);
+        });
+      }
+    });
 }
 
 function transformUnit(rawStr) {
@@ -131,19 +117,20 @@ function getMiniCss(rawStr) {
       str += `${key}: ${value};\n`;
     });
   }
-  console.log('copy-figma-css: css copyed');
-  console.log(str);
+  log('css copyed');
+  log(str);
   str = str.trim().replace(/[^\S]$/gm, '');
   return str;
 }
 
+/* test getMiniCss */
 if (!isBrowser) {
   const testStr = `
   font-weight: 300;
   font-weight: 600;
   font-size: 24px;
   border: 1px solid #000000;
-background: #FF8000;
+  background: #FF8000;
   `;
   const result = getMiniCss(testStr);
   console.log(result);
@@ -166,9 +153,6 @@ function setClipboardText(event) {
     }
   }
 }
-if (typeof setClipboardText !== undefined) {
-  document.removeEventListener('copy', setClipboardText);
-}
 document.addEventListener('copy', setClipboardText);
 
 /* auto copy */
@@ -185,7 +169,7 @@ function init() {
     if (retryTime < 10) {
       setTimeout(init, 1000);
     } else {
-      toast('自动复制功能未生效，请刷新页面，并激活 inspect(检查) Tab 以启用自动复制 CSS 的功能');
+      toast('自动复制功能未生效，请刷新页面，并激活 Tab 以启用自动复制 CSS 的功能');
     }
     return;
   }
@@ -202,7 +186,7 @@ function tryBindCodeWrapperElemEvent() {
       if (!hasActiveTabTip) {
         hasActiveTabTip = true;
         hasSuccessTip = false;
-        toast('请点击 inspect(检查) Tab 以启用自动复制 CSS 的功能');
+        toast('请点击检查 Tab 以启用自动复制 CSS 的功能');
       }
       return;
     }
@@ -257,4 +241,8 @@ function toast(message, dur = 3000) {
   toastT = setTimeout(function () {
     toastTipElem.style.display = 'none';
   }, dur);
+}
+
+function log(...args) {
+  console.log('copy-figma-css', ...args);
 }

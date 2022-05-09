@@ -1,11 +1,7 @@
-import * as vars from './vars/index.js';
-
 const CONFIG = {
   allAttrs: [
     'width',
     'height',
-    'margin',
-    'padding',
     'font-weight',
     'font-size',
     'color',
@@ -22,7 +18,8 @@ const CONFIG = {
   // 初始设置
   settings: [
     {
-      name: 'default',
+      id: 0,
+      name: 'config',
       enabled: true,
       attrs: [
         'font-weight',
@@ -41,24 +38,11 @@ const CONFIG = {
       border1pxEnabled: true,
       fixFontWeight: true,
       varEnable: false,
-      varStr: vars.PatientUniStr.trim(),
-      
-      varsEnabled: false,
-      vars: [
-        {
-          name: 'patient-uni',
-          str: vars.PatientUniStr.trim(),
-          editable: false,
-        },
-        {
-          name: 'medsaas',
-          str: vars.MedsaasStr.trim(),
-          editable: true,
-        },
-      ],
+      varStr: '',
     },
     {
-      name: 'default 2',
+      id: 1,
+      name: 'config 1',
       enabled: true,
       attrs: [
         'font-weight',
@@ -77,21 +61,7 @@ const CONFIG = {
       border1pxEnabled: true,
       fixFontWeight: true,
       varEnable: false,
-      varStr: vars.PatientUniStr.trim(),
-
-      varsEnabled: false,
-      vars: [
-        {
-          name: 'patient-uni',
-          str: vars.PatientUniStr.trim(),
-          editable: false,
-        },
-        {
-          name: 'medsaas',
-          str: vars.MedsaasStr.trim(),
-          editable: true,
-        },
-      ],
+      varStr: '',
     },
   ],
 };
