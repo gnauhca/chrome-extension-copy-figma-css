@@ -51,7 +51,7 @@ function updateSetting() {
         chrome.storage.sync.get([`setting_${currentId}`], (stores) => {
           Object.assign(setting, stores[`setting_${currentId}`]);
           setting.varData = getVarsFromStr(setting.varStr);
-          tryBindCodeWrapperElemEvent();
+          copyElemText();
           log('setting', setting);
         });
       }
@@ -118,8 +118,7 @@ function getMiniCss(rawStr) {
       str += `${key}: ${value};\n`;
     });
   }
-  log('css copyed');
-  log(str);
+  log('css copied', '\n' + str);
   str = str.trim().replace(/[^\S]$/gm, '');
   return str;
 }
@@ -163,45 +162,40 @@ let observer;
 let retryTime = 0;
 let hasActiveTabTip = false;
 let hasSuccessTip = false;
-let tipClosed = false;
-
-chrome.storage &&
-  chrome.storage.sync.get(['tipClosed'], (stores) => {
-    tipClosed = stores.tipClosed;
-  });
 
 function init() {
   const inspectElemWrapper = document.querySelector('[class*="properties_panel--tabsHeader"]');
   if (!inspectElemWrapper) {
     retryTime++;
-    if (retryTime < 10) {
-      setTimeout(init, 1000);
-    } else if (!tipClosed) {
-      toast('自动复制功能未生效，请刷新页面，并激活检查(inspect) Tab 以启用自动复制 CSS 的功能', onTipClose);
+    if (retryTime < 40) {
+      setTimeout(init, 2000);
+    } else if (retryTime === 10) {
+      // 超时 20 秒提示一次
+      toast('自动复制功能未生效，请刷新页面，并激活检查(inspect) Tab 以启用自动复制 CSS 的功能');
     }
     return;
   }
   inspectElemWrapper.addEventListener('click', () => {
     tryBindCodeWrapperElemEvent();
   });
-  inspectElemWrapper.click();
-}
-function onTipClose() {
-  chrome.storage &&
-  chrome.storage.sync.set({
-    tipClosed: true,
-  });
-  return true;
+
+  inspectElem = inspectElemWrapper.querySelector('[data-label="Inspect"]') || inspectElemWrapper.querySelector('[data-label="检查"]');
+  if (inspectElem) {
+    inspectElem.dispatchEvent(new MouseEvent('mousedown', {
+      'bubbles': true
+    }));
+  }
+  setTimeout(() => inspectElemWrapper.click(), 50);
 }
 
 function tryBindCodeWrapperElemEvent() {
   setTimeout(() => {
     const newCodeWrapperElem = document.querySelector('[class*="inspect_panels--tabularInspectionPanel"]');
     if (!newCodeWrapperElem) {
-      if (!hasActiveTabTip && !tipClosed) {
+      if (!hasActiveTabTip) {
         hasActiveTabTip = true;
         hasSuccessTip = false;
-        toast('请点击检查(inspect) 以启用自动复制 CSS 的功能', onTipClose);
+        toast('请点击检查(inspect) 以启用自动复制 CSS 的功能');
       }
       return;
     }
@@ -216,11 +210,15 @@ function tryBindCodeWrapperElemEvent() {
 }
 
 function copyElemText(elem) {
+  const wrapperElem = elem || codeWrapperElem;
+  if (!wrapperElem) {
+    return;
+  }
   if (!setting.enabled) {
     return;
   }
   var r = document.createRange();
-  r.selectNode(elem);
+  r.selectNode(wrapperElem);
   window.getSelection().removeAllRanges();
   window.getSelection().addRange(r);
   document.execCommand('copy');
@@ -230,7 +228,26 @@ function copyElemText(elem) {
     toast('自动复制 CSS 功能已开启！');
   }
 }
-window.addEventListener('load', init);
+window.addEventListener('load', onUrlChange);
+
+let lastUrl = location.href; 
+new MutationObserver(() => {
+  const url = location.href;
+  if (url !== lastUrl) {
+    lastUrl = url;
+    onUrlChange();
+  }
+}).observe(document, {subtree: true, childList: true});
+ 
+ 
+function onUrlChange() {
+  if (/figma.com\/file\//.test(lastUrl)) {
+    setTimeout(init, 2000);
+    log('Url changed, it\'s a figma file');
+  } else {
+    log('Url changed, it\'s not a figma file');
+  }
+}
 
 /* utils */
 let toastT = 0;
@@ -246,7 +263,7 @@ window.addEventListener('load', () => {
   document.querySelector('body').appendChild(toastTipElem);
 });
 
-function toast(message, dur = 3000) {
+function toast(message, dur = 5000) {
   if (!setting.enabled) {
     return;
   }
@@ -269,5 +286,6 @@ function toast(message, dur = 3000) {
 }
 
 function log(...args) {
-  console.log('copy-figma-css', ...args);
+  console.log('copy-figma-css:', ...args);
 }
+
