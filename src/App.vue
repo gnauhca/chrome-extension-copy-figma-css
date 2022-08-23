@@ -9,7 +9,7 @@
             :class="{ current: setting === refCurrent }"
             v-for="setting in refSettings"
             :key="setting.name"
-            @click="refCurrent = setting"
+            @click="onSettingSelect(setting)"
           >
             <span
               :contenteditable="setting === refCurrent"
@@ -42,7 +42,7 @@
       </div>
     </div>
     <div class="setting-wrapper" v-if="refCurrent.enabled">
-      <div class="form-item form-item--block">
+      <div class="form-item form-item--block" v-if="0">
         <div class="label">属性</div>
         <div class="control">
           <div class="attrs">
@@ -96,7 +96,7 @@
         </div>
       </div>
       <div class="form-item">
-        <div class="label">转换 1px border</div>
+        <div class="label">不缩放 1px</div>
         <div class="control">
           <Switch
             :checked="refCurrent.border1pxEnabled"
@@ -104,7 +104,46 @@
           />
         </div>
       </div>
-      <div class="form-item">
+      <div class="form-item form-item--block">
+        <div class="label">忽略属性<span class="label__tip">(英文逗号隔开，文本内容会默认忽略 width,height)</span></div>
+        <div class="control">
+          <Textarea
+            class="textarea"
+            v-model:value="refCurrent.disableAttrsStr"
+          ></Textarea>
+        </div>
+      </div>
+      <div class="form-item form-item--block">
+        <div class="label" @click="refCustomHelpDialogVisible = true">
+          自定义替换
+          <span class="label__help"><span>?</span></span>
+        </div>
+        <div class="control">
+          <Switch
+            :checked="refCurrent.customEnable"
+            @change="refCurrent.customEnable = !refCurrent.customEnable"
+          />
+        </div>
+        <div
+          class="control control--block control"
+          v-if="refCurrent.customEnable"
+        >
+          <div class="custom-str">
+            <Textarea
+              class="textarea"
+              placeholder="匹配规则"
+              v-model:value="refCurrent.customFromStr"
+            ></Textarea>
+            <div class="to">替换为</div>
+            <Textarea
+              class="textarea"
+              placeholder="替换内容"
+              v-model:value="refCurrent.customToStr"
+            ></Textarea>
+          </div>
+        </div>
+      </div>
+      <!--  <div class="form-item" v-if="0">
         <div class="label">兼容 font-weight</div>
         <div class="control">
           <Switch
@@ -112,7 +151,7 @@
             @change="refCurrent.fixFontWeight = !refCurrent.fixFontWeight"
           />
         </div>
-      </div>
+      </div> -->
       <div class="form-item">
         <div class="label">变量</div>
         <div class="control">
@@ -131,11 +170,42 @@
         </div>
       </div>
     </div>
-    <Modal :visible="refHelpDialogVisible" title="使用说明" :footer="null" @cancel="refHelpDialogVisible = false">
+    <Modal
+      :visible="refHelpDialogVisible"
+      title="使用说明"
+      :footer="null"
+      @cancel="refHelpDialogVisible = false"
+    >
       <div class="help-content">
-        <p>1 打开 figma 设计稿，<span class="warning">打开新设计稿需刷新页面</span></p>
-        <p class="warning">2 激活 “检查(inspect)” tab</p>
+        <p>1 打开 figma 设计稿</p>
+        <p>
+          2
+          <span class="warning">激活 “检查(inspect)” tab</span
+          >，打开设计稿会默认尝试激活
+        </p>
         <p>3 选中元素，样式即自动复制到剪贴板</p>
+      </div>
+    </Modal>
+
+    <Modal
+      :visible="refCustomHelpDialogVisible"
+      title="自定义替换"
+      :footer="null"
+      @cancel="refCustomHelpDialogVisible = false"
+    >
+      <div class="help-content">
+        <p>1 一行一个替换规则，上面框为匹配规则，下面框为替换内容</p>
+        <p>
+          2 支持正则匹配，非 / 开头则普通匹配
+        </p>
+        <div>
+          3 默认规则作用是：<br>
+          <div style="margin: 5px 0 0 10px; font-size: 11px; color: #888;">
+            · 字重大于等于 500 替换成 700<br>
+            · 忽略小于 400 或为 normal 的字重<br>
+            · 忽略带有 url 的 background
+          </div>
+        </div>
       </div>
     </Modal>
   </div>
@@ -174,6 +244,7 @@ export default {
     const refSettings = ref(settings);
     const refCurrent = ref(refSettings.value[0]);
     const refHelpDialogVisible = ref(false);
+    const refCustomHelpDialogVisible = ref(false);
 
     Object.assign(returnValues, {
       refTabWrapper,
@@ -184,6 +255,7 @@ export default {
       refSettings,
       refCurrent,
       refHelpDialogVisible,
+      refCustomHelpDialogVisible,
     });
 
     function onAttrClick(attr) {
@@ -216,7 +288,7 @@ export default {
               currentId: newId,
             });
           refSettings.value.push(newSetting);
-          refCurrent.value = newSetting;
+          changeSetting(newSetting);
         });
       }
       scrollToCurrent();
@@ -230,17 +302,25 @@ export default {
           const index = refSettings.value.indexOf(setting);
           const removeId = refSettings.value[index].id;
           refSettings.value.splice(index, 1);
-          refCurrent.value =
-            refSettings.value[Math.max(0, refSettings.value.length - 1)];
-
+          changeSetting(
+            refSettings.value[Math.max(0, refSettings.value.length - 1)]
+          );
           chrome.storage && chrome.storage.sync.remove(`setting_${removeId}`);
         },
       });
     }
+    function onSettingSelect(setting) {
+      changeSetting(setting);
+    }
     function onTabBlur(e, setting) {
       setting.name = e.target.innerText;
     }
-    Object.assign(returnValues, { onSettingAdd, onSettingDelete, onTabBlur });
+    Object.assign(returnValues, {
+      onSettingAdd,
+      onSettingDelete,
+      onSettingSelect,
+      onTabBlur,
+    });
 
     function scrollToCurrent() {
       const currentElem = refTabWrapper.value.querySelector(".current");
@@ -252,6 +332,18 @@ export default {
         });
         console.log(refTabWrapper.value);
       }, 50);
+    }
+
+    function changeSetting(setting) {
+      if (typeof setting.customFromStr === "undefined") {
+        setting.customFromStr = CONFIG.settings[0].customFromStr;
+        setting.customToStr = CONFIG.settings[0].customToStr;
+        setting.customEnable = true;
+      }
+      if (typeof setting.disableAttrsStr === "undefined") {
+        setting.disableAttrsStr = CONFIG.settings[0].disableAttrsStr;
+      }
+      refCurrent.value = setting;
     }
 
     setTimeout(scrollToCurrent, 500);
@@ -297,7 +389,7 @@ export default {
                 settings.push(stores[id]);
               }
               refSettings.value = settings;
-              refCurrent.value = settings.find((item) => item.id === currentId);
+              changeSetting(settings.find((item) => item.id === currentId));
             });
           }
         }
@@ -326,8 +418,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
   position: relative;
   color: #2c3e50;
-  width: 350px;
+  width: 400px;
   padding-bottom: 15px;
+  font-size: 12px;
+  line-height: 1.5;
 }
 .help {
   position: absolute;
@@ -347,6 +441,7 @@ body {
   font-size: 13px;
   p {
     margin-bottom: 5px;
+    font-size: 12px;
   }
   .warning {
     color: red;
@@ -437,8 +532,34 @@ body {
   .label {
     margin-right: 20px;
     flex: none;
+    display: flex;
+    align-items: center;
     font-size: 12px;
     margin-bottom: 4px;
+    font-weight: bold;
+    &__help {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 6px;
+      width: 13px;
+      height: 13px;
+      font-size: 12px;
+      line-height: 0;
+      border-radius: 100%;
+      border: 1px solid #333;
+      cursor: pointer;
+      span {
+        display: block;
+        transform: scale(0.8);
+      }
+    }
+    &__tip {
+      font-size: 10px;
+      color: #888;
+      margin-left: 6px;
+      font-weight: normal;
+    }
   }
   .control {
     &--block {
@@ -476,6 +597,9 @@ body {
     color: #fff;
   }
 }
+.textarea {
+  font-size: 12px;
+}
 .attr-input-number {
   padding: 4px 8px;
   font-size: 12px;
@@ -490,6 +614,12 @@ body {
   textarea {
     width: 100%;
     font-size: 12px;
+  }
+}
+.custom-str {
+  .to {
+    margin: 5px 0;
+    font-size: 10px;
   }
 }
 </style>

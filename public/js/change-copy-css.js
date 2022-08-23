@@ -1,4 +1,5 @@
 const isBrowser = typeof window !== 'undefined';
+
 const setting = {
   enabled: true,
   attrs: [
@@ -15,6 +16,8 @@ const setting = {
     'box-shadow',
     'text-shadow',
   ],
+  disableAttrsStr: 'position,top,left,bottom,right,font-family,font-style',
+  disableAttrs: 'position,top,left,bottom,right,font-family,font-style'.split(','),
   unit: 'px',
   scale: 1,
   border1pxEnabled: true,
@@ -22,6 +25,11 @@ const setting = {
   varEnabled: false,
   varData: null,
   varStr: '',
+  customEnable: false,
+  customFromStr: 'font-weight: 500;',
+  customToStr: 'font-weight: 700;',
+  customFrom: [],
+  customTo: [],
 };
 if (isBrowser) {
   updateSetting();
@@ -50,6 +58,11 @@ function updateSetting() {
       if (settingIds && settingIds.indexOf(currentId) > -1) {
         chrome.storage.sync.get([`setting_${currentId}`], (stores) => {
           Object.assign(setting, stores[`setting_${currentId}`]);
+          setting.disableAttrs = setting.disableAttrsStr.split(',');
+          if (setting.customEnable && setting.customFromStr && setting.customToStr) {
+            setting.customFrom = setting.customFromStr.split(/\n/g);
+            setting.customTo = setting.customToStr.split(/\n/g);
+          }
           setting.varData = getVarsFromStr(setting.varStr);
           copyElemText();
           log('setting', setting);
@@ -58,11 +71,32 @@ function updateSetting() {
     });
 }
 
-function transformUnit(rawStr) {
+function transformUnit(rawStr, ignoreOnePx) {
   let result = rawStr.replace(/([\d\.]+)px/g, (pxStr, number) => {
+    if (number === '1' && ignoreOnePx) {
+      return;
+    }
     return Number((number * setting.scale).toFixed(6)) + setting.unit;
   });
   return result;
+}
+
+function isMatch(str, pStr) {
+  const match = pStr.match(/^\/(.+)\/([a-z]*)$/)
+  if (match) {
+    const p = match[1].replace('\\', '\\\\');
+    const regx = new RegExp(match[1], match[2]);
+    if (regx.test(str)) {
+      return true;
+    }
+  } else {
+    str = str.replace(': ', ':');
+    str = str.replace(/;$/, '');
+    pStr = pStr.replace(': ', ':');
+    pStr = pStr.replace(/;$/, '');
+    return str === pStr
+  }
+  return false;
 }
 
 function getMiniCss(rawStr) {
@@ -72,11 +106,24 @@ function getMiniCss(rawStr) {
   const isFont = Boolean(rawStr.match(/font-size/));
   if (rows) {
     rows.forEach((row) => {
-      let [key, value] = row.split(':').map((item) => item.trim());
-      value = value.replace(/;$/, '');
-      if (setting.attrs.indexOf(key) === -1) {
+      if (setting.customEnable && setting.customFrom.length && setting.customTo.length) {
+        for (let i = 0; i < setting.customFrom.length; i++) {
+          const from = setting.customFrom[i];
+          if (isMatch(row, from)) {
+            row = setting.customTo[i] || '';
+            break;
+          }
+        }
+      }
+      if (!row || row.trim() === '') {
         return;
       }
+      let [key, value] = row.split(':').map((item) => item.trim());
+    
+      if (setting.disableAttrs.indexOf(key) > -1) {
+        return;
+      }
+      value = value.replace(/;+$/, '');
       if (isFont && (key === 'width' || key === 'height')) {
         return;
       }
@@ -92,10 +139,8 @@ function getMiniCss(rawStr) {
           fontWeightValue = value;
         }
         value = fontWeightValue + '';
-      } else if (key === 'border' && value.indexOf('1px') > -1 && !setting.border1pxEnabled) {
-        // 不处理
       } else {
-        value = transformUnit(value);
+        value = transformUnit(value, setting.border1pxEnabled);
       }
 
       // 变量替换

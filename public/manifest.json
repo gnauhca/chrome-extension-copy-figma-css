@@ -22,5 +22,5 @@
 			"run_at": "document_start"
 		}
 	],
-	"permissions": ["storage", "activeTab", "clipboardWrite"]
+	"permissions": ["storage", "clipboardWrite"]
 }
