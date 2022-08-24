@@ -72,11 +72,12 @@ function updateSetting() {
 }
 
 function transformUnit(rawStr, ignoreOnePx) {
+  let scale = setting.scale;
   let result = rawStr.replace(/([\d\.]+)px/g, (pxStr, number) => {
     if (number === '1' && ignoreOnePx) {
-      return;
+      scale = 1;
     }
-    return Number((number * setting.scale).toFixed(6)) + setting.unit;
+    return Number((number * scale).toFixed(6)) + setting.unit;
   });
   return result;
 }
