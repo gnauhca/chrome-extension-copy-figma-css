@@ -29,8 +29,9 @@
       </div>
       <div class="add" @click="onSettingAdd">+</div>
     </div>
+    <!-- 启用 -->
     <div class="form-item">
-      <div class="label">启用</div>
+      <div class="label">{{ locale.enable }}</div>
       <div class="control">
         <div
           class="switch"
@@ -42,7 +43,7 @@
       </div>
     </div>
     <div class="setting-wrapper" v-if="refCurrent.enabled">
-      <div class="form-item form-item--block" v-if="0">
+      <!-- <div class="form-item form-item--block" v-if="0">
         <div class="label">属性</div>
         <div class="control">
           <div class="attrs">
@@ -57,9 +58,10 @@
             </span>
           </div>
         </div>
-      </div>
+      </div> -->
+      <!-- 缩放 -->
       <div class="form-item">
-        <div class="label">缩放</div>
+        <div class="label">{{ locale.scale }}</div>
         <div class="control">
           <div class="attrs">
             <div
@@ -79,8 +81,9 @@
           </div>
         </div>
       </div>
+      <!-- 单位 -->
       <div class="form-item">
-        <div class="label">单位</div>
+        <div class="label">{{ locale.unit }}</div>
         <div class="control">
           <div class="attrs">
             <div
@@ -95,8 +98,9 @@
           </div>
         </div>
       </div>
+      <!-- 不缩放 1px -->
       <div class="form-item">
-        <div class="label">不缩放 1px</div>
+        <div class="label">{{ locale.ignore1px }}</div>
         <div class="control">
           <Switch
             :checked="refCurrent.border1pxEnabled"
@@ -104,8 +108,9 @@
           />
         </div>
       </div>
+      <!-- 忽略属性 -->
       <div class="form-item form-item--block">
-        <div class="label">忽略属性<span class="label__tip">(英文逗号隔开，文本内容会默认忽略 width,height)</span></div>
+        <div class="label">{{ locale.ignoreAttrs }}<span class="label__tip">({{ locale.ignoreAttrsTip }})</span></div>
         <div class="control">
           <Textarea
             class="textarea"
@@ -113,9 +118,10 @@
           ></Textarea>
         </div>
       </div>
+      <!-- 自定义替换 -->
       <div class="form-item form-item--block">
         <div class="label" @click="refCustomHelpDialogVisible = true">
-          自定义替换
+          {{ locale.customReplace }}
           <span class="label__help"><span>?</span></span>
         </div>
         <div class="control">
@@ -129,15 +135,16 @@
           v-if="refCurrent.customEnable"
         >
           <div class="custom-str">
+            <div class="to">{{ locale.customReplaceFrom }}</div>
             <Textarea
               class="textarea"
-              placeholder="匹配规则"
+              :placeholder="locale.customReplacePlaceholder1"
               v-model:value="refCurrent.customFromStr"
             ></Textarea>
-            <div class="to">替换为</div>
+            <div class="to">{{ locale.customReplaceTo }}</div>
             <Textarea
               class="textarea"
-              placeholder="替换内容"
+              :placeholder="locale.customReplacePlaceholder2"
               v-model:value="refCurrent.customToStr"
             ></Textarea>
           </div>
@@ -152,8 +159,9 @@
           />
         </div>
       </div> -->
+      <!-- 变量 -->
       <div class="form-item">
-        <div class="label">变量</div>
+        <div class="label">{{ locale.var }}</div>
         <div class="control">
           <Switch
             :checked="refCurrent.varEnabled"
@@ -163,7 +171,7 @@
         <div class="control control--block" v-if="refCurrent.varEnabled">
           <div class="vars-edit">
             <Textarea
-              placeholder="支持 sass less cssvar 例：@primary-color: #abc;"
+              :placeholder="locale.varPlaceholder"
               v-model:value="refCurrent.varStr"
             ></Textarea>
           </div>
@@ -172,38 +180,38 @@
     </div>
     <Modal
       :visible="refHelpDialogVisible"
-      title="使用说明"
+      :title="locale.help.title"
       :footer="null"
       @cancel="refHelpDialogVisible = false"
     >
       <div class="help-content">
-        <p>1 打开 figma 设计稿</p>
+        <p>{{ locale.help.content[0] }}</p>
         <p>
           2
-          <span class="warning">激活 “检查(inspect)” tab</span
-          >，打开设计稿会默认尝试激活
+          <span class="warning">{{ locale.help.content[1][0] }}</span
+          >{{ locale.help.content[1][1] }}
         </p>
-        <p>3 选中元素，样式即自动复制到剪贴板</p>
+        <p>{{ locale.help.content[2] }}</p>
       </div>
     </Modal>
 
     <Modal
       :visible="refCustomHelpDialogVisible"
-      title="自定义替换"
+      :title="locale.customReplaceHelp.title"
       :footer="null"
       @cancel="refCustomHelpDialogVisible = false"
     >
       <div class="help-content">
-        <p>1 一行一个替换规则，上面框为匹配规则，下面框为替换内容</p>
+        <p>{{ locale.customReplaceHelp.content[0] }}</p>
         <p>
-          2 支持正则匹配，非 / 开头则普通匹配
+          {{ locale.customReplaceHelp.content[1] }}
         </p>
         <div>
-          3 默认规则作用是：<br>
+          {{ locale.customReplaceHelp.content[2] }}<br>
           <div style="margin: 5px 0 0 10px; font-size: 11px; color: #888;">
-            · 字重大于等于 500 替换成 700<br>
-            · 忽略小于 400 或为 normal 的字重<br>
-            · 忽略带有 url 的 background
+            · {{ locale.customReplaceHelp.contentExtra[0] }}<br>
+            · {{ locale.customReplaceHelp.contentExtra[1] }}<br>
+            · {{ locale.customReplaceHelp.contentExtra[2] }}
           </div>
         </div>
       </div>
@@ -218,7 +226,9 @@ import Input from "./components/input.vue";
 import Textarea from "./components/textarea.vue";
 import Switch from "./components/switch.vue";
 import { Modal } from "ant-design-vue";
+import locales from './locale/index'
 
+const locale = navigator.language.indexOf('zh') > -1 ? locales.zh : locales.en;
 window.getAll = function () {
   chrome.storage &&
     chrome.storage.sync.get(null, (stores) => {
@@ -237,7 +247,7 @@ export default {
     Modal,
   },
   setup() {
-    const returnValues = {};
+    const returnValues = { locale };
     const refTabWrapper = ref(null);
 
     const { allAttrs, units, scales, settings } = CONFIG;

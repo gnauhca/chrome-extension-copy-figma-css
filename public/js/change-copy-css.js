@@ -1,3 +1,18 @@
+const MESSAGES = {
+  zh: {
+    inspectTabNotFound: '自动复制功能未生效，请刷新页面，并激活检查(inspect) Tab 以启用自动复制 CSS 的功能',
+    pleaseClickInspect: '请点击检查(inspect) 以启用自动复制 CSS 的功能',
+    autoCopyInitSuccess: '自动复制 CSS 功能已开启！',
+  },
+  en: {
+    inspectTabNotFound: 'Auto copy CSS not working, please refresh the page and activate the inspect tab to enable auto copy CSS',
+    pleaseClickInspect: 'Please click inspect tab to enable auto copy CSS',
+    autoCopyInitSuccess: 'Auto copy CSS is working',
+  }
+};
+
+let message = document.documentElement.lang.indexOf('zh') > -1 ? MESSAGES.zh : MESSAGES.en;
+
 const isBrowser = typeof window !== 'undefined';
 
 const setting = {
@@ -38,6 +53,14 @@ if (isBrowser) {
       updateSetting();
     });
 }
+
+const debounce = function(fn, delay = 50) {
+  let t = 0;
+  return function d() {
+    clearTimeout(t);
+    t = setTimeout(fn, delay);
+  }
+};
 
 function getVarsFromStr(str = '') {
   const vars = [];
@@ -221,7 +244,7 @@ function init() {
     }
     return;
   }
-  inspectElemWrapper.addEventListener('click', () => {
+  inspectElemWrapper.addEventListener('mousedown', () => {
     tryBindCodeWrapperElemEvent();
   });
 
@@ -231,7 +254,6 @@ function init() {
       'bubbles': true
     }));
   }
-  setTimeout(() => inspectElemWrapper.click(), 50);
 }
 
 function tryBindCodeWrapperElemEvent() {
@@ -241,7 +263,7 @@ function tryBindCodeWrapperElemEvent() {
       if (!hasActiveTabTip) {
         hasActiveTabTip = true;
         hasSuccessTip = false;
-        toast('请点击检查(inspect) 以启用自动复制 CSS 的功能');
+        toast(message.pleaseClickInspect);
       }
       return;
     }
@@ -271,29 +293,28 @@ function copyElemText(elem) {
   window.getSelection().removeAllRanges();
   if (!hasSuccessTip) {
     hasSuccessTip = true;
-    toast('自动复制 CSS 功能已开启！');
+    toast(message.autoCopyInitSuccess);
   }
 }
-window.addEventListener('load', onUrlChange);
-
-let lastUrl = location.href; 
-new MutationObserver(() => {
-  const url = location.href;
-  if (url !== lastUrl) {
-    lastUrl = url;
-    onUrlChange();
-  }
-}).observe(document, {subtree: true, childList: true});
  
- 
-function onUrlChange() {
-  if (/figma.com\/file\//.test(lastUrl)) {
+const onUrlChange = debounce(function () {
+  if (/\/file\//.test(lastPathname)) {
     setTimeout(init, 2000);
     log('Url changed, it\'s a figma file');
   } else {
     log('Url changed, it\'s not a figma file');
   }
-}
+}, 1000);
+
+let lastPathname = location.pathname; 
+new MutationObserver(() => {
+  const url = location.pathname;
+  if (url !== lastPathname) {
+    lastPathname = url;
+    onUrlChange();
+  }
+}).observe(document, {subtree: true, childList: true});
+window.addEventListener('load', onUrlChange);
 
 /* utils */
 let toastT = 0;

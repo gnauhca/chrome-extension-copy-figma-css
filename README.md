@@ -1,16 +1,24 @@
 # chrome-extension: copy-figma-css
 
-自动复制 figma css 代码，加速你写样式的效率，特性：
-* 选择节点自动复制样式
-* 自动过滤注释
-* 支持配置自定义转换样式
-* 支持自定义 less/scss/css-var 变量替换
+Enable this plugin to activate the inspect tab in figma file, and it can automatically copy the CSS code according to the rules you set after any node is selected
 
-## 使用方法：
+With this plugin you can:
+* Copy Figma Css automatically
+* Ignore useless comments and unwanted properties
+* Set Scale level of the number and custom unit 
+* Custom replace rule
+* Replace the value by css/less/sass variables
+* Different configs for different projects
 
-参考扩展地址: [https://chrome.google.com/webstore/detail/copy-figma-css/npogkncheacjllmfhehhofcacmeigpgl](https://chrome.google.com/webstore/detail/copy-figma-css/npogkncheacjllmfhehhofcacmeigpgl)
+## Usage: 
+* Install this plugin and Pin it in the extension bar
+* Open or refresh the figma file, activate the "inspect" tab (important)
+* Select the element to automatically copy the css to the clipboard according to the set rules (manually copy will also be processed)
+* If the browser ask the permission to read the clipboard, click Allow to read, it read the CSS code only
 
-## 开发
+Extension Link: [https://chrome.google.com/webstore/detail/copy-figma-css/npogkncheacjllmfhehhofcacmeigpgl](https://chrome.google.com/webstore/detail/copy-figma-css/npogkncheacjllmfhehhofcacmeigpgl)
+
+## Develop
 ```shell
 // develop
 npm run dev
