@@ -1,6 +1,6 @@
 # chrome-extension: copy-figma-css
 
-Enable this extension and activate the inspect tab in figma file, the CSS can be automatically copied according to the rules you set after any node is selected
+Enable this extension and activate the inspect tab in a figma file, the CSS can be automatically copied according to the rules you set after any node is selected
 
 ## Feature:
 * Copy Figma Css automatically
