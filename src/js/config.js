@@ -14,7 +14,7 @@ const allAttrs = [
   'text-shadow',
   'filter',
 ];
-const disableAttrs = ['position', 'top', 'left', 'bottom', 'right', 'font-family', 'font-style'];
+const disableAttrs = 'position,top,left,bottom,right,font-family,font-style,display,order,flex,flex-grow,flex-shink,flex-direction,align-items,justify-content,gap,mix-blend-mode'.split(',');
 
 const defaultConfig = {
   id: 0,

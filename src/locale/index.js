@@ -4,7 +4,7 @@ const locales = {
     scale: 'Scale',
     unit: 'Unit',
     ignore1px: "Don't scale 1px",
-    ignoreAttrs: 'Ignore attrs',
+    ignoreAttrs: 'Exclude attrs',
     ignoreAttrsTip: 'Separated by commas, text node will ignore width&height',
     customReplace: 'Custom replacement',
     customReplaceFrom: 'When Match',
