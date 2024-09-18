@@ -1,6 +1,8 @@
 node_modules
 .DS_Store
+.history
 dist
 dist*
 *.local
 temp*
+package-lock.json

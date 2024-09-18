@@ -224,7 +224,7 @@ function setClipboardText(event) {
 }
 document.addEventListener('copy', setClipboardText);
 
-/* auto copy */
+/* auto copy: Figma page elements change frequently, so this feature is deprecated. */
 let inspectTabTriggerElem;
 let codeWrapperElem;
 let observer;
@@ -236,9 +236,9 @@ function init() {
   const inspectElemWrapper = document.querySelector('[class*="properties_panel--tabsHeader"]');
   if (!inspectElemWrapper) {
     retryTime++;
-    if (retryTime < 40) {
+    if (retryTime < 10) {
       setTimeout(init, 2000);
-    } else if (retryTime === 10) {
+    } else {
       // 超时 20 秒提示一次
       toast('自动复制功能未生效，请刷新页面，并激活检查(inspect) Tab 以启用自动复制 CSS 的功能');
     }
@@ -298,7 +298,7 @@ function copyElemText(elem) {
 }
  
 const onUrlChange = debounce(function () {
-  if (/\/file\//.test(lastPathname)) {
+  if (/\/design\//.test(lastPathname)) {
     setTimeout(init, 2000);
     log('Url changed, it\'s a figma file');
   } else {
@@ -306,15 +306,15 @@ const onUrlChange = debounce(function () {
   }
 }, 1000);
 
-let lastPathname = location.pathname; 
-new MutationObserver(() => {
-  const url = location.pathname;
-  if (url !== lastPathname) {
-    lastPathname = url;
-    onUrlChange();
-  }
-}).observe(document, {subtree: true, childList: true});
-window.addEventListener('load', onUrlChange);
+// let lastPathname = location.pathname; 
+// new MutationObserver(() => {
+//   const url = location.pathname;
+//   if (url !== lastPathname) {
+//     lastPathname = url;
+//     onUrlChange();
+//   }
+// }).observe(document, {subtree: true, childList: true});
+// window.addEventListener('load', onUrlChange);
 
 /* utils */
 let toastT = 0;
